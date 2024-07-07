@@ -1,0 +1,112 @@
+import requests
+import hashlib
+import time
+from datetime import datetime
+
+# WindGuru API details
+UPLOAD_URL = "http://www.windguru.cz/upload/api.php"
+STATION_UID = "YOUR_STATION_UID"  # Replace with your station UID
+STATION_PASSWORD = "YOUR_STATION_PASSWORD"  # Replace with your station password
+
+# Simulated weather data (replace with actual sensor readings)
+def get_weather_data():
+    return {
+        "wind_avg": 20,  # knots
+        "wind_max": 25,  # knots
+        "wind_min": 15,  # knots
+        "wind_direction": 225,  # degrees (SW)
+        "temperature": 22,  # Celsius
+        "rh": 60,  # relative humidity %
+        "mslp": 1013,  # hPa
+    }
+
+def generate_salt():
+    return datetime.now().strftime("%Y%m%d%H%M%S")
+
+def calculate_hash(salt):
+    string_to_hash = f"{salt}{STATION_UID}{STATION_PASSWORD}"
+    return hashlib.md5(string_to_hash.encode()).hexdigest()
+
+def upload_data(weather_data):
+    salt = generate_salt()
+    hash_value = calculate_hash(salt)
+
+    params = {
+        "uid": STATION_UID,
+        "interval": 60,  # Assuming 1-minute intervals
+        "salt": salt,
+        "hash": hash_value,
+        **weather_data
+    }
+
+    response = requests.get(UPLOAD_URL, params=params)
+    return response.status_code == 200, response.text
+
+def main():
+    while True:
+        weather_data = get_weather_data()
+        success, response = upload_data(weather_data)
+        
+        if success:
+            print(f"Data uploaded successfully at {datetime.now()}")
+        else:
+            print(f"Failed to upload data: {response}")
+        
+        time.sleep(60)  # Wait for 1 minute before next upload
+
+if __name__ == "__main__":
+    main()
+
+# WindGuru API details
+UPLOAD_URL = "http://www.windguru.cz/upload/api.php"
+STATION_UID = "YOUR_STATION_UID"  # Replace with your station UID
+STATION_PASSWORD = "YOUR_STATION_PASSWORD"  # Replace with your station password
+
+# Simulated weather data (replace with actual sensor readings)
+def get_weather_data():
+    return {
+        "wind_avg": 20,  # knots
+        "wind_max": 25,  # knots
+        "wind_min": 15,  # knots
+        "wind_direction": 225,  # degrees (SW)
+        "temperature": 22,  # Celsius
+        "rh": 60,  # relative humidity %
+        "mslp": 1013,  # hPa
+    }
+
+def generate_salt():
+    return datetime.now().strftime("%Y%m%d%H%M%S")
+
+def calculate_hash(salt):
+    string_to_hash = f"{salt}{STATION_UID}{STATION_PASSWORD}"
+    return hashlib.md5(string_to_hash.encode()).hexdigest()
+
+def upload_data(weather_data):
+    salt = generate_salt()
+    hash_value = calculate_hash(salt)
+
+    params = {
+        "uid": STATION_UID,
+        "interval": 60,  # Assuming 1-minute intervals
+        "salt": salt,
+        "hash": hash_value,
+        **weather_data
+    }
+
+    response = requests.get(UPLOAD_URL, params=params)
+    return response.status_code == 200, response.text
+
+def main():
+    while True:
+        weather_data = get_weather_data()
+        success, response = upload_data(weather_data)
+        
+        if success:
+            print(f"Data uploaded successfully at {datetime.now()}")
+        else:
+            print(f"Failed to upload data: {response}")
+        
+        time.sleep(60)  # Wait for 1 minute before next upload
+
+if __name__ == "__main__":
+    main()
