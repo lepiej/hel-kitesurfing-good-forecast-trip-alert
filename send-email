@@ -1,0 +1,124 @@
+import requests
+import hashlib
+import time
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from datetime import datetime
+
+# WindGuru API Details
+STATION_UID = "YOUR_STATION_UID"  # Replace with your station UID
+STATION_PASSWORD = "YOUR_STATION_PASSWORD"  # Replace with your station password
+UPLOAD_URL = "http://www.windguru.cz/upload/api.php"
+FETCH_URL = "http://www.windguru.cz/int/wgsapi.php"  # WindGuru API endpoint for retrieving data
+
+# Email Configuration (Update these)
+SMTP_SERVER = "smtp.your-email.com"  # Example: "smtp.gmail.com"
+SMTP_PORT = 587  # Commonly used SMTP port
+SENDER_EMAIL = "your_email@example.com"  # Replace with your email
+SENDER_PASSWORD = "your_email_password"  # Replace with your email password
+RECIPIENT_EMAILS = ["recipient1@example.com", "recipient2@example.com"]  # List of recipients
+
+# Variable to store latest weather data
+latest_weather_data = {}
+
+# Function to generate a salt (time-based)
+def generate_salt():
+    return datetime.now().strftime("%Y%m%d%H%M%S")
+
+# Function to calculate hash for authentication
+def calculate_hash(salt):
+    string_to_hash = f"{salt}{STATION_UID}{STATION_PASSWORD}"
+    return hashlib.md5(string_to_hash.encode()).hexdigest()
+
+# Function to retrieve the latest weather data
+def fetch_latest_weather():
+    global latest_weather_data
+    salt = generate_salt()
+    hash_value = calculate_hash(salt)
+
+    params = {
+        "uid": STATION_UID,
+        "salt": salt,
+        "hash": hash_value,
+        "q": "station_data",
+        "params": "wind_avg,wind_max,wind_min,wind_direction,temperature,rh,mslp"
+    }
+
+    response = requests.get(FETCH_URL, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        if "last" in data and data["last"]:
+            latest_entry = data["last"]
+            latest_weather_data = {
+                "wind_avg": latest_entry.get("wind_avg", "N/A"),
+                "wind_max": latest_entry.get("wind_max", "N/A"),
+                "wind_min": latest_entry.get("wind_min", "N/A"),
+                "wind_direction": latest_entry.get("wind_direction", "N/A"),
+                "temperature": latest_entry.get("temperature", "N/A"),
+                "rh": latest_entry.get("rh", "N/A"),
+                "mslp": latest_entry.get("mslp", "N/A"),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            print("Weather data successfully retrieved.")
+        else:
+            print("No weather data found.")
+    else:
+        print(f"Failed to fetch weather data. Status Code: {response.status_code}")
+
+# Function to send weather update via email
+def send_weather_email():
+    if not latest_weather_data:
+        print("No weather data available to send.")
+        return
+
+    subject = "Latest Weather Update from WindGuru Station"
+    body = f"""
+    Latest Weather Report - {latest_weather_data['timestamp']}
+    
+    Wind Avg: {latest_weather_data['wind_avg']} knots
+    Wind Max: {latest_weather_data['wind_max']} knots
+    Wind Min: {latest_weather_data['wind_min']} knots
+    Wind Direction: {latest_weather_data['wind_direction']}°
+    Temperature: {latest_weather_data['temperature']}°C
+    Humidity: {latest_weather_data['rh']}%
+    MSLP: {latest_weather_data['mslp']} hPa
+    """
+
+    try:
+        # Set up SMTP server
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+
+        # Send email to each recipient
+        for recipient in RECIPIENT_EMAILS:
+            msg = MIMEMultipart()
+            msg["From"] = SENDER_EMAIL
+            msg["To"] = recipient
+            msg["Subject"] = subject
+            msg.attach(MIMEText(body, "plain"))
+
+            server.sendmail(SENDER_EMAIL, recipient, msg.as_string())
+
+        server.quit()
+        print(f"Weather update sent to: {', '.join(RECIPIENT_EMAILS)}")
+    
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+# Main Function
+def main():
+    while True:
+        print("Fetching latest weather data...")
+        fetch_latest_weather()
+
+        print("Sending email notification...")
+        send_weather_email()
+
+        print("Waiting 10 minutes before next update...")
+        time.sleep(600)  # Wait 10 minutes before checking again
+
+if __name__ == "__main__":
+    main()
