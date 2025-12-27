@@ -16,7 +16,7 @@ As a kitesurfer living in Warsaw (Poland), I wanted to build an alert for good w
 
 ## Quick start
 
-1. Copy `.env.example` to `.env` and fill SMTP credentials and `EMAIL_TO`.
+1. In `.env` fill SMTP credentials and `EMAIL_TO`.
 
 2. Install dependencies:
 
